@@ -27,6 +27,14 @@ class LegacyProvider {
     sodium.crypto_generichash(this.blindingKey, this.blockKey)
   }
 
+  load () {
+    // compat
+  }
+
+  setContext () {
+    // compat
+  }
+
   encrypt (index, block, fork) {
     return LegacyProvider.encrypt(index, block, fork, this.blockKey, this.blindingKey)
   }
