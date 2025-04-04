@@ -56,36 +56,35 @@ test('legacy', async t => {
 
   const block = HypercoreEncryption.createLegacyProvider(key)
 
-  t.is(block.padding, 8)
-  t.ok(block.seekable)
-
   const b0 = b4a.alloc(32, 0)
   const b1 = b4a.alloc(32, 1)
   const b2 = b4a.alloc(32, 2)
 
-  const e0 = b4a.alloc(b0.byteLength + block.padding)
-  const e1 = b4a.alloc(b1.byteLength + block.padding)
-  const e2 = b4a.alloc(b2.byteLength + block.padding)
+  const e0 = b4a.alloc(b0.byteLength + 8)
+  const e1 = b4a.alloc(b1.byteLength + 8)
+  const e2 = b4a.alloc(b2.byteLength + 8)
 
-  e0.set(b0, block.padding)
-  e1.set(b1, block.padding)
-  e2.set(b2, block.padding)
+  t.ok(block.seekable)
+
+  e0.set(b0, 8)
+  e1.set(b1, 8)
+  e2.set(b2, 8)
 
   block.encrypt(0, e0, 0)
   block.encrypt(1, e1, 1)
   block.encrypt(2, e2, 2)
 
-  t.is(e0.byteLength, b0.byteLength + block.padding)
-  t.is(e1.byteLength, b1.byteLength + block.padding)
-  t.is(e2.byteLength, b2.byteLength + block.padding)
+  t.is(e0.byteLength, b0.byteLength + 8)
+  t.is(e1.byteLength, b1.byteLength + 8)
+  t.is(e2.byteLength, b2.byteLength + 8)
 
   block.decrypt(0, e0)
   block.decrypt(1, e1)
   block.decrypt(2, e2)
 
-  t.alike(e0.subarray(block.padding), b0)
-  t.alike(e1.subarray(block.padding), b1)
-  t.alike(e2.subarray(block.padding), b2)
+  t.alike(e0.subarray(8), b0)
+  t.alike(e1.subarray(8), b1)
+  t.alike(e2.subarray(8), b2)
 })
 
 test('encryption provider can decrypt legacy', async t => {
@@ -93,7 +92,6 @@ test('encryption provider can decrypt legacy', async t => {
   const blindingKey = crypto.hash(legacyKey)
 
   const legacy = HypercoreEncryption.createLegacyProvider(legacyKey)
-
   const block = new HypercoreEncryption(blindingKey, { getBlockKey })
 
   const b0 = b4a.alloc(32, 0)
@@ -101,19 +99,21 @@ test('encryption provider can decrypt legacy', async t => {
   const b2 = b4a.alloc(32, 2)
   const b3 = b4a.alloc(32, 3)
 
-  const e0 = b4a.alloc(32 + legacy.padding)
-  const e1 = b4a.alloc(32 + legacy.padding)
-  const e2 = b4a.alloc(32 + legacy.padding)
+  const e0 = b4a.alloc(32 + 8)
+  const e1 = b4a.alloc(32 + 8)
+  const e2 = b4a.alloc(32 + 8)
   const e3 = b4a.alloc(32 + 16)
 
   // legacy scheme
-  e0.set(b0, legacy.padding)
-  e1.set(b1, legacy.padding)
-  e2.set(b2, legacy.padding)
+  e0.set(b0, 8)
+  e1.set(b1, 8)
+  e2.set(b2, 8)
 
   legacy.encrypt(0, e0, 0) // fork has to be pegged to 0
   legacy.encrypt(1, e1, 0)
   legacy.encrypt(2, e2, 0)
+
+  await block.load(1)
 
   // updated scheme
   e3.set(b3, 16)
@@ -129,9 +129,9 @@ test('encryption provider can decrypt legacy', async t => {
   await block.decrypt(2, e2)
   await block.decrypt(3, e3)
 
-  t.alike(e0.subarray(legacy.padding), b0)
-  t.alike(e1.subarray(legacy.padding), b1)
-  t.alike(e2.subarray(legacy.padding), b2)
+  t.alike(e0.subarray(8), b0)
+  t.alike(e1.subarray(8), b1)
+  t.alike(e2.subarray(8), b2)
   t.alike(e3.subarray(16), b3)
 })
 
@@ -198,7 +198,7 @@ test('sub class', async t => {
 async function getBlockKey (id) {
   await Promise.resolve()
 
-  if (id === -1) id = 1 // default
+  if (id === -1) id = 0 // default
 
   if (id === 0) {
     return {
@@ -209,7 +209,7 @@ async function getBlockKey (id) {
   }
 
   return {
-    id: id,
+    id,
     version: 1,
     key: b4a.alloc(32, id)
   }
