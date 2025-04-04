@@ -1,6 +1,5 @@
 const sodium = require('sodium-universal')
 const crypto = require('hypercore-crypto')
-const ReadyResource = require('ready-resource')
 const c = require('compact-encoding')
 const b4a = require('b4a')
 
@@ -26,10 +25,6 @@ class LegacyProvider {
     this.version = LegacyProvider.version
 
     sodium.crypto_generichash(this.blindingKey, this.blockKey)
-  }
-
-  ready () {
-    // api compat
   }
 
   encrypt (index, block, fork) {
@@ -105,9 +100,7 @@ class BlockProvider {
     encrypt(block, nonce, key)
   }
 
-  static decrypt (index, block, key, paddingBytes) {
-    if (paddingBytes !== this.padding) throw new Error('Unsupported padding')
-
+  static decrypt (index, block, key) {
     const padding = block.subarray(0, this.padding)
     block = block.subarray(this.padding)
 
@@ -120,64 +113,58 @@ class BlockProvider {
   }
 }
 
-class HypercoreEncryption extends ReadyResource {
+class HypercoreEncryption {
   static KEYBYTES = sodium.crypto_stream_KEYBYTES
 
-  constructor (blindingKey, getBlockKey, opts = {}) {
-    super()
-
+  constructor (blindingKey, opts = {}) {
     this.blindingKey = blindingKey
-    this.getBlockKey = getBlockKey // hook
 
+    this.context = null
+    this.current = null
     this.keys = new Map()
-    this.preopen = opts.preopen || null
 
-    this.current = {
-      id: -1,
-      version: -1,
-      key: null,
-      padding: 0
+    if (opts.getBlockKey) {
+      this._getBlockKey = opts.getBlockKey
     }
   }
 
   get padding () {
-    return this.current ? this.current.padding : 0
+    if (!this.current) return 0
+    if (this.current.version === 0) return LegacyProvider.padding
+    if (this.current.version === 1) return BlockProvider.padding
+    return 0
   }
 
   get seekable () {
-    return this.padding !== 0
+    return true
   }
 
   get version () {
     return this.current ? this.current.version : -1
   }
 
-  async _open () {
-    if (!this.preopen) return
-    const id = await this.preopen
-    if (id !== -1) return this.load(id)
-  }
-
   async load (id) {
-    const info = await this._get(id)
-
-    this.current = {
-      id,
-      version: info.version,
-      key: info.key,
-      padding: info.padding
-    }
+    this.current = await this._get(id)
   }
 
   async _get (id) {
     if (this.keys.has(id)) return this.keys.get(id)
 
-    const info = await this.getBlockKey(id)
+    const info = await this._getBlockKey(id, this.context)
     if (!info) throw new Error('Unrecognised encryption id')
 
     this.keys.set(id, info)
 
     return info
+  }
+
+  _getBlockKey () {
+    // must be providede by user
+    throw new Error('Not implemented')
+  }
+
+  setContext (context) {
+    this.context = context
   }
 
   _parseId (index, block) {
@@ -193,9 +180,11 @@ class HypercoreEncryption extends ReadyResource {
   }
 
   async encrypt (index, block, fork) {
-    if (!this.opened) await this.ready()
+    if (this.current === null) {
+      await this.load(null)
+    }
 
-    if (this.current.id === -1) {
+    if (this.current === null) {
       throw new Error('Encryption provider has not been loaded')
     }
 
@@ -212,19 +201,17 @@ class HypercoreEncryption extends ReadyResource {
   }
 
   async decrypt (index, block) {
-    if (!this.opened) await this.ready()
-
     const id = this._parseId(index, block)
     const info = await this._get(id)
 
-    const { version, key, padding } = info
+    const { version, key } = info
 
     switch (version) {
       case LegacyProvider.version:
         return LegacyProvider.decrypt(index, block, key)
 
       case BlockProvider.version:
-        return BlockProvider.decrypt(index, block, key, padding)
+        return BlockProvider.decrypt(index, block, key)
 
       default:
         throw new Error('Unrecognised version')
