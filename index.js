@@ -181,7 +181,7 @@ class HypercoreEncryption {
 
   async encrypt (index, block, fork) {
     if (this.current === null) {
-      await this.load(null)
+      await this.load(-1)
     }
 
     if (this.current === null) {

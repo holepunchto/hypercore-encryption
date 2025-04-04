@@ -148,7 +148,7 @@ test('sub class', async t => {
 
       await new Promise(process.nextTick)
 
-      if (id === null) id = 0
+      if (id === -1) id = 0
       return {
         id,
         version: 1,
@@ -198,7 +198,7 @@ test('sub class', async t => {
 async function getBlockKey (id) {
   await Promise.resolve()
 
-  if (id === null) id = 1 // default
+  if (id === -1) id = 1 // default
 
   if (id === 0) {
     return {
