@@ -101,25 +101,12 @@ class HypercoreEncryption {
   constructor (blindingKey, opts = {}) {
     this.blindingKey = blindingKey
 
-    this.context = {
-      manifest: null,
-      key: null
-    }
-
     this.current = null
     this.keys = new Map()
-
-    if (opts.context) this.setContext(opts.context)
 
     if (opts.getBlockKey) {
       this._getBlockKey = opts.getBlockKey
     }
-  }
-
-  get padding () {
-    if (this.context.manifest === null) return 0
-    if (this.isLegacy()) return LegacyProvider.padding
-    return BlockProvider.padding
   }
 
   get seekable () {
@@ -130,21 +117,21 @@ class HypercoreEncryption {
     return this.current ? this.current.version : -1
   }
 
-  isLegacy () {
-    return !!this.context.manifest && this.context.manifest.version <= LEGACY_MANIFEST_VERSION
+  isLegacy (ctx) {
+    return !!(ctx.manifest && ctx.manifest.version <= LEGACY_MANIFEST_VERSION)
   }
 
-  async load (id) {
-    this.current = await this._get(id)
+  async load (id, ctx = {}) {
+    this.current = await this._get(id, ctx)
   }
 
-  async _get (id) {
+  async _get (id, ctx) {
     if (this.keys.has(id)) return this.keys.get(id)
 
-    const info = await this._getBlockKey(id, this.context)
-    if (!info) throw new Error('Unrecognised encryption id')
+    const info = await this._getBlockKey(id, ctx)
+    if (!info) return null
 
-    this.keys.set(id, info)
+    this.keys.set(info.id, info)
 
     return info
   }
@@ -152,11 +139,6 @@ class HypercoreEncryption {
   _getBlockKey () {
     // must be providede by user
     throw new Error('Not implemented')
-  }
-
-  setContext ({ key, manifest } = {}) {
-    if (key && !this.context.key) this.context.key = key
-    if (manifest && !this.context.manifest) this.context.manifest = manifest
   }
 
   _parseId (index, block) {
@@ -171,16 +153,28 @@ class HypercoreEncryption {
     return c.uint32.decode({ start: 0, end: 4, buffer: id })
   }
 
-  async encrypt (index, block, fork) {
+  paddingLength (ctx) {
+    if (ctx.manifest && ctx.manifest.version <= LEGACY_MANIFEST_VERSION) {
+      return LegacyProvider.padding
+    }
+
+    if (ctx.manifest) {
+      return BlockProvider.padding
+    }
+
+    throw new Error('Unrecognised encryption context')
+  }
+
+  async encrypt (index, block, fork, ctx = {}) {
     if (this.current === null) {
-      await this.load(-1)
+      await this.load(-1, ctx)
     }
 
     if (this.current === null) {
       throw new Error('Encryption provider has not been loaded')
     }
 
-    if (this.isLegacy()) {
+    if (this.isLegacy(ctx)) {
       return LegacyProvider.encrypt(index, block, fork, this.current.key, this.blindingKey)
     }
 
@@ -193,13 +187,15 @@ class HypercoreEncryption {
     throw new Error('Unknown encryption scheme')
   }
 
-  async decrypt (index, block) {
-    if (this.isLegacy()) {
+  async decrypt (index, block, ctx = {}) {
+    if (this.isLegacy(ctx)) {
       return LegacyProvider.decrypt(index, block, this.current.key)
     }
 
     const id = this._parseId(index, block)
-    const info = await this._get(id)
+
+    const info = await this._get(id, ctx)
+    if (!info) throw new Error('Unknown encryption id')
 
     const { version, key } = info
 
@@ -225,19 +221,6 @@ class HypercoreEncryption {
 
   static getBlockKey (hypercoreKey, encryptionKey) {
     return getBlockKey(hypercoreKey, encryptionKey)
-  }
-
-  static encrypt (index, block, fork, version, id, key, blindingKey) {
-    switch (version) {
-      case LegacyProvider.version:
-        return LegacyProvider.encrypt(index, block, fork, key, blindingKey)
-
-      case BlockProvider.version: {
-        return BlockProvider.encrypt(index, block, fork, id, key, blindingKey)
-      }
-    }
-
-    throw new Error('Unknown encryption scheme')
   }
 }
 
