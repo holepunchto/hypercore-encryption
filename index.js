@@ -109,6 +109,8 @@ class HypercoreEncryption {
     this.current = null
     this.keys = new Map()
 
+    if (opts.context) this.setContext(opts.context)
+
     if (opts.getBlockKey) {
       this._getBlockKey = opts.getBlockKey
     }
