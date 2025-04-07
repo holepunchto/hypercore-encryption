@@ -118,7 +118,7 @@ class HypercoreEncryption {
   }
 
   isLegacy (ctx) {
-    return !!(ctx.manifest && ctx.manifest.version <= LEGACY_MANIFEST_VERSION)
+    return !!(ctx && ctx.manifest && ctx.manifest.version <= LEGACY_MANIFEST_VERSION)
   }
 
   async load (id, ctx = {}) {
@@ -154,18 +154,18 @@ class HypercoreEncryption {
   }
 
   paddingLength (ctx) {
-    if (ctx.manifest && ctx.manifest.version <= LEGACY_MANIFEST_VERSION) {
+    if (ctx && ctx.manifest && ctx.manifest.version <= LEGACY_MANIFEST_VERSION) {
       return LegacyProvider.padding
     }
 
-    if (ctx.manifest) {
+    if (ctx && ctx.manifest) {
       return BlockProvider.padding
     }
 
     throw new Error('Unrecognised encryption context')
   }
 
-  async encrypt (index, block, fork, ctx = {}) {
+  async encrypt (index, block, fork, ctx) {
     if (this.current === null) {
       await this.load(-1, ctx)
     }
@@ -187,7 +187,7 @@ class HypercoreEncryption {
     throw new Error('Unknown encryption scheme')
   }
 
-  async decrypt (index, block, ctx = {}) {
+  async decrypt (index, block, ctx) {
     if (this.isLegacy(ctx)) {
       return LegacyProvider.decrypt(index, block, this.current.key)
     }
