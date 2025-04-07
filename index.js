@@ -139,8 +139,8 @@ class HypercoreEncryption {
     return info
   }
 
-  _ensureBlindingKey () {
-    if (!this.blindingKey) this.blindingKey = this._getBlindingKey()
+  _ensureBlindingKey (ctx) {
+    if (!this.blindingKey) this.blindingKey = this._getBlindingKey(ctx)
     if (!this.blindingKey) throw new Error('No blinding key available')
   }
 
@@ -187,7 +187,7 @@ class HypercoreEncryption {
       throw new Error('Encryption provider has not been loaded')
     }
 
-    this._ensureBlindingKey()
+    this._ensureBlindingKey(ctx)
 
     if (this.isLegacy(ctx)) {
       return LegacyProvider.encrypt(index, block, fork, this.current.key, this.blindingKey)
@@ -210,7 +210,7 @@ class HypercoreEncryption {
       return LegacyProvider.decrypt(index, block, info.key)
     }
 
-    this._ensureBlindingKey()
+    this._ensureBlindingKey(ctx)
 
     const id = this._parseId(index, block)
 

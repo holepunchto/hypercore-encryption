@@ -158,8 +158,6 @@ test('encryption provider can decrypt legacy', async t => {
 })
 
 test('sub class', async t => {
-  const blindingKey = crypto.hash(b4a.alloc(32, 0))
-
   class ContextEncryption extends HypercoreEncryption {
     constructor (opts = {}) {
       super(opts)
@@ -180,8 +178,8 @@ test('sub class', async t => {
       }
     }
 
-    _getBlindingKey () {
-      return blindingKey
+    _getBlindingKey (context) {
+      return crypto.hash(context.key)
     }
   }
 
