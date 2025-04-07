@@ -151,7 +151,7 @@ test('sub class', async t => {
     }
 
     async _getBlockKey (id, context) {
-      if (!context.key) {
+      if (!context) {
         throw new Error('Missing context')
       }
 

@@ -121,7 +121,7 @@ class HypercoreEncryption {
     return !!(ctx && ctx.manifest && ctx.manifest.version <= LEGACY_MANIFEST_VERSION)
   }
 
-  async load (id, ctx = {}) {
+  async load (id, ctx) {
     this.current = await this._get(id, ctx)
   }
 
