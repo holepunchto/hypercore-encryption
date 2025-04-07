@@ -17,33 +17,6 @@ class LegacyProvider {
   static version = TYPES.LEGACY
   static padding = 8
 
-  constructor (blockKey) {
-    this.blockKey = blockKey
-    this.blindingKey = b4a.allocUnsafe(sodium.crypto_stream_KEYBYTES)
-
-    this.seekable = true
-    this.padding = LegacyProvider.padding
-    this.version = LegacyProvider.version
-
-    sodium.crypto_generichash(this.blindingKey, this.blockKey)
-  }
-
-  load () {
-    // compat
-  }
-
-  setContext () {
-    // compat
-  }
-
-  encrypt (index, block, fork) {
-    return LegacyProvider.encrypt(index, block, fork, this.blockKey, this.blindingKey)
-  }
-
-  decrypt (index, block) {
-    return LegacyProvider.decrypt(index, block, this.blockKey)
-  }
-
   static encrypt (index, block, fork, key, blindingKey) {
     const padding = block.subarray(0, this.padding)
     block = block.subarray(this.padding)
@@ -250,10 +223,6 @@ class HypercoreEncryption {
 
   static getBlockKey (hypercoreKey, encryptionKey) {
     return getBlockKey(hypercoreKey, encryptionKey)
-  }
-
-  static createLegacyProvider (blockKey) {
-    return new LegacyProvider(blockKey)
   }
 
   static encrypt (index, block, fork, version, id, key, blindingKey) {
