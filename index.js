@@ -142,8 +142,8 @@ class HypercoreEncryption {
   }
 
   get padding () {
-    if (this.manifestVersion === -1) return 0
-    if (this.manifestVersion <= LEGACY_MANIFEST_VERSION) return LegacyProvider.padding
+    if (this.context.manifest === null) return 0
+    if (this.isLegacy()) return LegacyProvider.padding
     return BlockProvider.padding
   }
 
@@ -155,8 +155,8 @@ class HypercoreEncryption {
     return this.current ? this.current.version : -1
   }
 
-  get manifestVersion () {
-    return this.context.manifest ? this.context.manifest.version : -1
+  isLegacy () {
+    return !!this.context.manifest && this.context.manifest.version <= LEGACY_MANIFEST_VERSION
   }
 
   async load (id) {
@@ -205,7 +205,7 @@ class HypercoreEncryption {
       throw new Error('Encryption provider has not been loaded')
     }
 
-    if (this.manifestVersion !== -1 && this.manifestVersion <= LEGACY_MANIFEST_VERSION) {
+    if (this.isLegacy()) {
       return LegacyProvider.encrypt(index, block, fork, this.current.key, this.blindingKey)
     }
 
@@ -219,7 +219,7 @@ class HypercoreEncryption {
   }
 
   async decrypt (index, block) {
-    if (this.manifestVersion !== -1 && this.manifestVersion <= LEGACY_MANIFEST_VERSION) {
+    if (this.isLegacy()) {
       return LegacyProvider.decrypt(index, block, this.current.key)
     }
 
