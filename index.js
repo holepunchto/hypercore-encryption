@@ -175,7 +175,7 @@ class HypercoreEncryption {
       return BlockProvider.padding
     }
 
-    throw new Error('Unrecognised encryption context')
+    return 0
   }
 
   async encrypt (index, block, fork, ctx) {
