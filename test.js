@@ -7,7 +7,10 @@ const HypercoreEncryption = require('./')
 test('basic', async t => {
   const blindingKey = b4a.alloc(32, b4a.from([0x12, 0x34]))
 
-  const block = new HypercoreEncryption(blindingKey, { getBlockKey })
+  const block = new HypercoreEncryption({
+    getBlockKey,
+    getBlindingKey: () => blindingKey
+  })
 
   await block.load(1)
 
@@ -55,7 +58,10 @@ test('legacy', async t => {
   const key = b4a.alloc(32, 0)
   const blindingKey = crypto.hash(key)
 
-  const block = new HypercoreEncryption(blindingKey, { getBlockKey })
+  const block = new HypercoreEncryption({
+    getBlockKey,
+    getBlindingKey: () => blindingKey
+  })
 
   const ctx = { manifest: { version: 1 } }
 
@@ -94,8 +100,15 @@ test('encryption provider can decrypt legacy', async t => {
   const legacyKey = b4a.alloc(32, 0)
   const blindingKey = crypto.hash(legacyKey)
 
-  const legacy = new HypercoreEncryption(blindingKey, { getBlockKey })
-  const block = new HypercoreEncryption(blindingKey, { getBlockKey })
+  const legacy = new HypercoreEncryption({
+    getBlockKey,
+    getBlindingKey: () => blindingKey
+  })
+
+  const block = new HypercoreEncryption({
+    getBlockKey,
+    getBlindingKey: () => blindingKey
+  })
 
   const legacyCtx = { manifest: { version: 1 } }
   const blockCtx = { manifest: { version: 2 } }
@@ -145,9 +158,11 @@ test('encryption provider can decrypt legacy', async t => {
 })
 
 test('sub class', async t => {
+  const blindingKey = crypto.hash(b4a.alloc(32, 0))
+
   class ContextEncryption extends HypercoreEncryption {
-    constructor (blindingKey, opts = {}) {
-      super(blindingKey, opts)
+    constructor (opts = {}) {
+      super(opts)
     }
 
     async _getBlockKey (id, context) {
@@ -164,10 +179,13 @@ test('sub class', async t => {
         key: crypto.hash([b4a.alloc(32, id), context.key])
       }
     }
+
+    _getBlindingKey () {
+      return blindingKey
+    }
   }
 
-  const blindingKey = crypto.hash(b4a.alloc(32, 0))
-  const block = new ContextEncryption(blindingKey)
+  const block = new ContextEncryption()
 
   const b0 = b4a.alloc(32, 0)
   const b1 = b4a.alloc(32, 1)

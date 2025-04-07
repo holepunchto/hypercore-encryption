@@ -98,14 +98,17 @@ class BlockProvider {
 class HypercoreEncryption {
   static KEYBYTES = sodium.crypto_stream_KEYBYTES
 
-  constructor (blindingKey, opts = {}) {
-    this.blindingKey = blindingKey
-
+  constructor (opts = {}) {
+    this.blindingKey = null
     this.current = null
     this.keys = new Map()
 
     if (opts.getBlockKey) {
       this._getBlockKey = opts.getBlockKey
+    }
+
+    if (opts.getBlindingKey) {
+      this._getBlindingKey = opts.getBlindingKey
     }
   }
 
@@ -136,7 +139,17 @@ class HypercoreEncryption {
     return info
   }
 
+  _ensureBlindingKey () {
+    if (!this.blindingKey) this.blindingKey = this._getBlindingKey()
+    if (!this.blindingKey) throw new Error('No blinding key available')
+  }
+
   _getBlockKey () {
+    // must be providede by user
+    throw new Error('Not implemented')
+  }
+
+  _getBlindingKey () {
     // must be providede by user
     throw new Error('Not implemented')
   }
@@ -174,6 +187,8 @@ class HypercoreEncryption {
       throw new Error('Encryption provider has not been loaded')
     }
 
+    this._ensureBlindingKey()
+
     if (this.isLegacy(ctx)) {
       return LegacyProvider.encrypt(index, block, fork, this.current.key, this.blindingKey)
     }
@@ -194,6 +209,8 @@ class HypercoreEncryption {
 
       return LegacyProvider.decrypt(index, block, info.key)
     }
+
+    this._ensureBlindingKey()
 
     const id = this._parseId(index, block)
 
