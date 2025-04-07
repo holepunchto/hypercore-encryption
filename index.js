@@ -166,7 +166,7 @@ class HypercoreEncryption {
     return c.uint32.decode({ start: 0, end: 4, buffer: id })
   }
 
-  paddingLength (ctx) {
+  padding (ctx) {
     if (ctx && ctx.manifest && ctx.manifest.version <= LEGACY_MANIFEST_VERSION) {
       return LegacyProvider.padding
     }

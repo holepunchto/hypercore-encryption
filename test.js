@@ -113,8 +113,8 @@ test('encryption provider can decrypt legacy', async t => {
   const legacyCtx = { manifest: { version: 1 } }
   const blockCtx = { manifest: { version: 2 } }
 
-  t.is(legacy.paddingLength(legacyCtx), 8)
-  t.is(legacy.paddingLength(blockCtx), 16)
+  t.is(legacy.padding(legacyCtx), 8)
+  t.is(legacy.padding(blockCtx), 16)
 
   const b0 = b4a.alloc(32, 0)
   const b1 = b4a.alloc(32, 1)
