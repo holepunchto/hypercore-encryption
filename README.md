@@ -7,18 +7,17 @@ Dyanmic Hypercore encryption provider
 ```js
 const HypercoreEncryption = require('hypercore-encryption')
 
-async function get (id) {
-  // get key info corresponding to id...
+const encryption = new HypercoreEncryption({
+  blindingKey,
+  getBlockKey (id, contexxt) {
+    // get key info corresponding to id and context...
 
-  return {
-    version, // encryption scheme
-    padding, // padding byte length
-    key // block key
+    return {
+      version, // encryption scheme
+      padding, // padding byte length
+      key // block key
+    }
   }
-}
-
-const encryption = new HypercoreEncryption(blindingKey, get, {
-  preopen: Promise.resolve(1) // optionally pass for initial id
 })
 
 const core = new Hypercore(storage, { encryption })
@@ -33,44 +32,45 @@ await core.append('encrypt with key 99')
 
 ## API
 
-#### `const enc = new HypercoreEncryption(blindingKey, getBlockKey, { promise })`
+#### `const enc = new HypercoreEncryption({ blindingKey, getBlockKey, getBlindingKey })`
 
 Instantiate a new encryption provider. Optionally pass a `preopen` promise that resolves to a key id to be loaded initially.
 
-Provide a hook with the signature:
+Provide a hooks with the signature:
 ```js
-function getBlockKey (id) {
+function getBlockKey (id, context) {
+  // context provides information about the core, eg:
+  //   context.key
+  //   context.manifest
+
+  // id id is passed as -1, the module expects the key to be updated
+
   return {
     version, // encryption scheme
     padding, // padding byte length
     key // block key
   }
 }
+
+function getBlockKey (context) {
+  return blindingKey // 32 byte blinding key
+}
+
 ```
 
-Note: in compat mode, the key info returned at `0` should always be version `0`.
+#### `const padding = enc.padding(context)`
 
-#### `await enc.ready()`
-
-Wait for initial key to load if provided.
-
-#### `enc.padding`
-
-The number of padding bytes used by the current scheme.
+The number of padding bytes.
 
 #### `enc.seekable`
 
 Boolean on whether the current scheme allows for seeks.
 
-#### `enc.id`
-
-The currently loaded key id.
-
 #### `enc.version`
 
 The version of the currently loaded scheme.
 
-#### `await enc.load(id)`
+#### `await enc.load(id, context)`
 
 Load the key under `id` and set to be the current encryption info.
 
@@ -82,17 +82,9 @@ Encrypt a block in place.
 
 Decrypt a block in place.
 
-#### `HypercoreEncryption.isHypercoreEncryption(enc)`
-
-Returns a boolean on whether `enc` is a valid encryption provider.
-
 #### `const blockKey = HypercoreEncryption.getBlockKey(hypercoreKey, encryptionKey)`
 
 Helper to generate namespaced block keys.
-
-#### `const legacy = HypercoreEncryption.createLegacyProvider(blockKey)`
-
-Create an encryption provider compatible with Hypercore's legacy encryption scheme.
 
 ## License
 
