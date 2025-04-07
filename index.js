@@ -5,6 +5,7 @@ const b4a = require('b4a')
 
 const [NS_BLOCK_KEY] = crypto.namespace('hypercore-encryption', 1)
 
+const LEGACY_MANIFEST_VERSION = 1
 const TYPES = {
   LEGACY: 0,
   BLOCK: 1
@@ -127,7 +128,11 @@ class HypercoreEncryption {
   constructor (blindingKey, opts = {}) {
     this.blindingKey = blindingKey
 
-    this.context = null
+    this.context = {
+      manifest: null,
+      key: null
+    }
+
     this.current = null
     this.keys = new Map()
 
@@ -137,10 +142,9 @@ class HypercoreEncryption {
   }
 
   get padding () {
-    if (!this.current) return 0
-    if (this.current.version === 0) return LegacyProvider.padding
-    if (this.current.version === 1) return BlockProvider.padding
-    return 0
+    if (this.manifestVersion === -1) return 0
+    if (this.manifestVersion <= LEGACY_MANIFEST_VERSION) return LegacyProvider.padding
+    return BlockProvider.padding
   }
 
   get seekable () {
@@ -149,6 +153,10 @@ class HypercoreEncryption {
 
   get version () {
     return this.current ? this.current.version : -1
+  }
+
+  get manifestVersion () {
+    return this.context.manifest ? this.context.manifest.version : -1
   }
 
   async load (id) {
@@ -171,8 +179,9 @@ class HypercoreEncryption {
     throw new Error('Not implemented')
   }
 
-  setContext (context) {
-    this.context = context
+  setContext ({ key, manifest } = {}) {
+    if (key && !this.context.key) this.context.key = key
+    if (manifest && !this.context.manifest) this.context.manifest = manifest
   }
 
   _parseId (index, block) {
@@ -196,10 +205,11 @@ class HypercoreEncryption {
       throw new Error('Encryption provider has not been loaded')
     }
 
-    switch (this.current.version) {
-      case LegacyProvider.version:
-        return LegacyProvider.encrypt(index, block, fork, this.current.key, this.blindingKey)
+    if (this.manifestVersion !== -1 && this.manifestVersion <= LEGACY_MANIFEST_VERSION) {
+      return LegacyProvider.encrypt(index, block, fork, this.current.key, this.blindingKey)
+    }
 
+    switch (this.current.version) {
       case BlockProvider.version: {
         return BlockProvider.encrypt(index, block, fork, this.current.id, this.current.key, this.blindingKey)
       }
@@ -209,6 +219,10 @@ class HypercoreEncryption {
   }
 
   async decrypt (index, block) {
+    if (this.manifestVersion !== -1 && this.manifestVersion <= LEGACY_MANIFEST_VERSION) {
+      return LegacyProvider.decrypt(index, block, this.current.key)
+    }
+
     const id = this._parseId(index, block)
     const info = await this._get(id)
 
@@ -216,6 +230,8 @@ class HypercoreEncryption {
 
     switch (version) {
       case LegacyProvider.version:
+        // beware: only safe to use new encryption
+        // on old data if the core has NEVER forked
         return LegacyProvider.decrypt(index, block, key)
 
       case BlockProvider.version:

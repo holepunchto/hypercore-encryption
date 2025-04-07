@@ -8,7 +8,9 @@ test('basic', async t => {
   const blindingKey = b4a.alloc(32, b4a.from([0x12, 0x34]))
 
   const block = new HypercoreEncryption(blindingKey, { getBlockKey })
+
   await block.load(1)
+  block.setContext({ manifest: { version: 2 } })
 
   t.is(block.padding, 16)
   t.ok(block.seekable)
@@ -52,9 +54,12 @@ test('basic', async t => {
 })
 
 test('legacy', async t => {
-  const key = b4a.alloc(32, 1)
+  const key = b4a.alloc(32, 0)
+  const blindingKey = crypto.hash(key)
 
-  const block = HypercoreEncryption.createLegacyProvider(key)
+  const block = new HypercoreEncryption(blindingKey, { getBlockKey })
+
+  block.setContext({ manifest: { version: 1 } })
 
   const b0 = b4a.alloc(32, 0)
   const b1 = b4a.alloc(32, 1)
@@ -70,17 +75,17 @@ test('legacy', async t => {
   e1.set(b1, 8)
   e2.set(b2, 8)
 
-  block.encrypt(0, e0, 0)
-  block.encrypt(1, e1, 1)
-  block.encrypt(2, e2, 2)
+  await block.encrypt(0, e0, 0)
+  await block.encrypt(1, e1, 1)
+  await block.encrypt(2, e2, 2)
 
   t.is(e0.byteLength, b0.byteLength + 8)
   t.is(e1.byteLength, b1.byteLength + 8)
   t.is(e2.byteLength, b2.byteLength + 8)
 
-  block.decrypt(0, e0)
-  block.decrypt(1, e1)
-  block.decrypt(2, e2)
+  await block.decrypt(0, e0)
+  await block.decrypt(1, e1)
+  await block.decrypt(2, e2)
 
   t.alike(e0.subarray(8), b0)
   t.alike(e1.subarray(8), b1)
@@ -91,8 +96,10 @@ test('encryption provider can decrypt legacy', async t => {
   const legacyKey = b4a.alloc(32, 0)
   const blindingKey = crypto.hash(legacyKey)
 
-  const legacy = HypercoreEncryption.createLegacyProvider(legacyKey)
+  const legacy = new HypercoreEncryption(blindingKey, { getBlockKey })
   const block = new HypercoreEncryption(blindingKey, { getBlockKey })
+
+  legacy.setContext({ manifest: { version: 1 } })
 
   const b0 = b4a.alloc(32, 0)
   const b1 = b4a.alloc(32, 1)
@@ -109,9 +116,9 @@ test('encryption provider can decrypt legacy', async t => {
   e1.set(b1, 8)
   e2.set(b2, 8)
 
-  legacy.encrypt(0, e0, 0) // fork has to be pegged to 0
-  legacy.encrypt(1, e1, 0)
-  legacy.encrypt(2, e2, 0)
+  await legacy.encrypt(0, e0, 0) // fork has to be pegged to 0
+  await legacy.encrypt(1, e1, 0)
+  await legacy.encrypt(2, e2, 0)
 
   await block.load(1)
 
@@ -142,7 +149,7 @@ test('sub class', async t => {
     }
 
     async _getBlockKey (id, context) {
-      if (context === null) {
+      if (context.key === null) {
         throw new Error('Context has not been set')
       }
 
@@ -152,7 +159,7 @@ test('sub class', async t => {
       return {
         id,
         version: 1,
-        key: crypto.hash([b4a.alloc(32, id), context])
+        key: crypto.hash([b4a.alloc(32, id), context.key])
       }
     }
   }
@@ -177,7 +184,7 @@ test('sub class', async t => {
 
   await t.exception(block.encrypt(0, e0, 0))
 
-  block.setContext(b4a.alloc(32, 1))
+  block.setContext({ key: b4a.alloc(32, 1) })
 
   await block.encrypt(0, e0, 0)
   await block.encrypt(1, e1, 0)
@@ -195,8 +202,10 @@ test('sub class', async t => {
   t.alike(e3.subarray(16), b3)
 })
 
-async function getBlockKey (id) {
+async function getBlockKey (id, context) {
   await Promise.resolve()
+
+  if (context.manifest && context.manifest.version <= 1) id = 0
 
   if (id === -1) id = 0 // default
 
