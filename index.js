@@ -99,7 +99,7 @@ class HypercoreEncryption {
   static KEYBYTES = sodium.crypto_stream_KEYBYTES
 
   constructor (opts = {}) {
-    this.blindingKey = null
+    this.blindingKey = opts.blindingKey || null
     this.current = null
     this.keys = new Map()
 
