@@ -189,7 +189,10 @@ class HypercoreEncryption {
 
   async decrypt (index, block, ctx) {
     if (this.isLegacy(ctx)) {
-      return LegacyProvider.decrypt(index, block, this.current.key)
+      const info = await this._get(0, ctx)
+      if (!info) throw new Error('No legacy key available')
+
+      return LegacyProvider.decrypt(index, block, info.key)
     }
 
     const id = this._parseId(index, block)
@@ -211,12 +214,6 @@ class HypercoreEncryption {
       default:
         throw new Error('Unrecognised version')
     }
-  }
-
-  static isHypercoreEncryption (enc) {
-    if (enc instanceof HypercoreEncryption) return true
-    if (enc instanceof LegacyProvider) return true
-    return false
   }
 
   static getBlockKey (hypercoreKey, encryptionKey) {
