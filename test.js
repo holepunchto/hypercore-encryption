@@ -81,6 +81,33 @@ test('transform', async t => {
   t.alike(e2.subarray(8), b)
 })
 
+test('broadcast', async t => {
+  const secret = b4a.from('something to hide')
+
+  const readers = []
+  for (let i = 0; i < 5; i++) {
+    readers.push(crypto.keyPair())
+  }
+
+  const recipients = readers.map(r => r.publicKey)
+  const broadcast = HypercoreEncryption.broadcastEncrypt(secret, recipients)
+
+  for (const reader of readers) {
+    t.alike(HypercoreEncryption.broadcastDecrypt(broadcast, reader.secretKey), secret)
+  }
+
+  const nonReader = crypto.keyPair()
+
+  t.absent(HypercoreEncryption.broadcastDecrypt(broadcast, nonReader.secretKey))
+
+  t.ok(HypercoreEncryption.broadcastVerify(broadcast, secret, recipients))
+  t.ok(HypercoreEncryption.broadcastVerify(broadcast, secret, recipients.slice(0, 2)))
+  t.ok(HypercoreEncryption.broadcastVerify(broadcast, secret, recipients.slice(2)))
+
+  t.absent(HypercoreEncryption.broadcastVerify(broadcast, secret, [nonReader.publicKey]))
+  t.absent(HypercoreEncryption.broadcastVerify(broadcast, secret, recipients.concat([nonReader.publicKey])))
+})
+
 async function getBlockKey (id, ctx) {
   if (id === -1) id = (Math.random() * 32) | 0
 

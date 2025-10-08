@@ -138,8 +138,12 @@ class HypercoreEncryption {
     return BroadcastEncryption.pack(plaintext, recipients)
   }
 
-  static broadcastDecrypt (ciphertext, recipientSecretKey, senderPublicKey) {
-    return BroadcastEncryption.unpack(ciphertext, recipientSecretKey, publicKey)
+  static broadcastDecrypt (ciphertext, recipientSecretKey) {
+    return BroadcastEncryption.unpack(ciphertext, recipientSecretKey)
+  }
+
+  static broadcastVerify (ciphertext, data, recipients) {
+    return BroadcastEncryption.verify(ciphertext, data, recipients)
   }
 }
 

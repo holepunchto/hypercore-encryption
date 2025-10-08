@@ -85,9 +85,13 @@ Helper to generate namespaced block keys.
 
 Helper to broadcast encrypt data to `recipients`.
 
-#### `const plaintext = HypercoreEncryption.broadcastEncrypt(ciphertext, recipientSecretKey, senderPublicKey)`
+#### `const plaintext = HypercoreEncryption.broadcastEncrypt(ciphertext, recipientSecretKey)`
 
 Helper to decrypt broadcast ciphertexts.
+
+#### `const verified = HypercoreEncryption.broadcastVerify(ciphertext, data, recipients)`
+
+Helper to verify broadcast ciphertexts. Returns `true` if there exists a valid encryption of `data` to each `recipient` key or `false` otherwise
 
 ## License
 
