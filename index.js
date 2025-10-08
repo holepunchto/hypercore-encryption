@@ -16,8 +16,6 @@ const nonce = b4a.alloc(sodium.crypto_stream_NONCEBYTES)
 const hash = nonce.subarray(0, sodium.crypto_generichash_BYTES_MIN)
 
 class EncryptionProvider {
-  static PADDING = 8
-
   constructor (encryption, opts = {}) {
     this.encryption = encryption
 
@@ -26,7 +24,7 @@ class EncryptionProvider {
   }
 
   padding () {
-    return EncryptionProvider.PADDING
+    return HypercoreEncryption.PADDING
   }
 
   async get (id, ctx) {
@@ -63,8 +61,8 @@ class EncryptionProvider {
       return DefaultEncryption.decrypt(index, block, keys.block)
     }
 
-    const padding = block.subarray(0, EncryptionProvider.PADDING)
-    block = block.subarray(EncryptionProvider.PADDING)
+    const padding = block.subarray(0, HypercoreEncryption.PADDING)
+    block = block.subarray(HypercoreEncryption.PADDING)
 
     const type = padding[0]
     switch (type) {
@@ -91,7 +89,7 @@ class EncryptionProvider {
 }
 
 class HypercoreEncryption {
-  static broadcast = BroadcastEncryption
+  static PADDING = 8
 
   constructor ({ fetch, namespace } = {}) {
     this.fetch = fetch
@@ -173,8 +171,8 @@ function blockhash (block, padding, hashKey) {
 }
 
 function encryptBlock (index, block, id, blockKey, hashKey) {
-  const padding = block.subarray(0, EncryptionProvider.PADDING)
-  block = block.subarray(EncryptionProvider.PADDING)
+  const padding = block.subarray(0, HypercoreEncryption.PADDING)
+  block = block.subarray(HypercoreEncryption.PADDING)
 
   blockhash(block, padding, hashKey)
   c.uint32.encode({ start: 4, end: 8, buffer: padding }, id)
