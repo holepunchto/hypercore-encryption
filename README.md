@@ -8,83 +8,86 @@ Dyanmic Hypercore encryption provider
 const HypercoreEncryption = require('hypercore-encryption')
 
 const encryption = new HypercoreEncryption({
-  blindingKey,
-  getBlockKey (id, contexxt) {
-    // get key info corresponding to id and context...
+  namespace,
+  async fetch (id) {
+    // get key info corresponding to id...
 
     return {
-      version, // encryption scheme
-      padding, // padding byte length
-      key // block key
+      id, // encryption scheme
+      payload // encryption key payload
     }
   }
 })
 
-const core = new Hypercore(storage, { encryption })
+const core = new Hypercore(storage, {
+  encryption: encryption.createEncryptionProvider({
+    transform (entropy) {
+      return crypto.hash([NAMESPACE, entropy]) // optionally hash
+    }
+  })
+})
+
 await core.ready()
-
-await core.append('encrypt with key 1')
-
-await encryption.load(99)
-
-await core.append('encrypt with key 99')
+await core.append('encrypt with key')
 ```
 
 ## API
 
-#### `const enc = new HypercoreEncryption({ blindingKey, getBlockKey, getBlindingKey })`
+#### `const enc = new HypercoreEncryption({ fetch, namespace })`
 
 Instantiate a new encryption provider. Optionally pass a `preopen` promise that resolves to a key id to be loaded initially.
 
+Any `namespace` passed in will be mixed into all generated encryption keys.
+
 Provide a hooks with the signature:
 ```js
-function getBlockKey (id, context) {
-  // context provides information about the core, eg:
-  //   context.key
-  //   context.manifest
-
-  // id id is passed as -1, the module expects the key to be updated
+function fetch (id) {
+  // if id is passed as -1, the module expects the latest key
 
   return {
-    version, // encryption scheme
-    padding, // padding byte length
-    key // block key
+    id, // encryption id
+    entropy // entropy
   }
-}
-
-function getBlockKey (context) {
-  return blindingKey // 32 byte blinding key
 }
 
 ```
 
-#### `const padding = enc.padding(context)`
+#### `const provider = enc.createEncryptionProvider({ transform, compat })`
 
-The number of padding bytes.
+Create an encryption provider.
 
-#### `enc.seekable`
+```
+{
+  transform (ctx, entropy) {
+    // implement custom block key derivation
+    // entropy will be passed as null when a compat
+    // is expected
+  },
+  compat (ctx, index) {
+    // return true or false whether a compat key is expected
+  }
+}
+```
 
-Boolean on whether the current scheme allows for seeks.
+#### `enc.clear()`
 
-#### `enc.version`
+Clear any cached keys.
 
-The version of the currently loaded scheme.
+#### `const namespace = HypercoreEncryption.namespace(seed)`
 
-#### `await enc.load(id, context)`
+Helper to generate namespaces.
 
-Load the key under `id` and set to be the current encryption info.
-
-#### `await enc.encrypt(index, block, fork)`
-
-Encrypt a block in place.
-
-#### `await enc.decrypt(index, block)`
-
-Decrypt a block in place.
-
-#### `const blockKey = HypercoreEncryption.getBlockKey(hypercoreKey, encryptionKey)`
+#### `const blockKey = HypercoreEncryption.getBlockKey(namespace, entropy, hypercoreKey)`
 
 Helper to generate namespaced block keys.
+
+#### `const ciphetext = HypercoreEncryption.broadcastEncrypt(plaintext, recipients)`
+
+Helper to broadcast encrypt data to `recipients`.
+
+#### `const plaintext = HypercoreEncryption.broadcastEncrypt(ciphertext, recipientSecretKey, senderPublicKey)`
+
+Helper to decrypt broadcast ciphertexts.
 
 ## License
 
