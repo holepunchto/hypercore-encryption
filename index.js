@@ -95,14 +95,10 @@ class HypercoreEncryption {
     this.fetch = fetch
 
     this._cache = new Map()
-    this._sessions = new Set()
   }
 
   createEncryptionProvider ({ transform, compat } = {}) {
-    const session = new EncryptionProvider(this, { transform, compat })
-    this._sessions.add(session)
-
-    return session
+    return new EncryptionProvider(this, { transform, compat })
   }
 
   clear () {
