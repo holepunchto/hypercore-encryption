@@ -7,17 +7,16 @@ Dyanmic Hypercore encryption provider
 ```js
 const HypercoreEncryption = require('hypercore-encryption')
 
-const encryption = new HypercoreEncryption({
-  namespace,
-  async fetch (id) {
-    // get key info corresponding to id...
+const getEncryptionKey = async (id) => {
+  // get key info corresponding to id...
 
-    return {
-      id, // encryption scheme
-      payload // encryption key payload
-    }
+  return {
+    id, // encryption scheme
+    payload // encryption key payload
   }
-})
+}
+
+const encryption = new HypercoreEncryption(getEncryptionKey)
 
 const core = new Hypercore(storage, {
   encryption: encryption.createEncryptionProvider({
