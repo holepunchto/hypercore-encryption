@@ -5,9 +5,7 @@ const b4a = require('b4a')
 const HypercoreEncryption = require('./')
 
 test('basic', async t => {
-  const encryption = new HypercoreEncryption({
-    fetch: getBlockKey
-  })
+  const encryption = new HypercoreEncryption(getBlockKey)
 
   const block = encryption.createEncryptionProvider()
 
@@ -45,10 +43,10 @@ test('basic', async t => {
 })
 
 test('transform', async t => {
-  const encryption = new HypercoreEncryption({ fetch: getBlockKey })
+  const encryption = new HypercoreEncryption(getBlockKey)
 
-  const transform1 = (ctx, entropy) => crypto.hash([b4a.alloc(32, 1), entropy])
-  const transform2 = (ctx, entropy) => crypto.hash([b4a.alloc(32, 2), entropy])
+  const transform1 = generateTransform(b4a.alloc(32, 1))
+  const transform2 = generateTransform(b4a.alloc(32, 2))
 
   const block1 = encryption.createEncryptionProvider({ transform: transform1 })
   const block2 = encryption.createEncryptionProvider({ transform: transform2 })
@@ -81,33 +79,6 @@ test('transform', async t => {
   t.alike(e2.subarray(8), b)
 })
 
-test('broadcast', async t => {
-  const secret = b4a.from('something to hide')
-
-  const readers = []
-  for (let i = 0; i < 5; i++) {
-    readers.push(crypto.keyPair())
-  }
-
-  const recipients = readers.map(r => r.publicKey)
-  const broadcast = HypercoreEncryption.broadcastEncrypt(secret, recipients)
-
-  for (const reader of readers) {
-    t.alike(HypercoreEncryption.broadcastDecrypt(broadcast, reader.secretKey), secret)
-  }
-
-  const nonReader = crypto.keyPair()
-
-  t.absent(HypercoreEncryption.broadcastDecrypt(broadcast, nonReader.secretKey))
-
-  t.ok(HypercoreEncryption.broadcastVerify(broadcast, secret, recipients))
-  t.ok(HypercoreEncryption.broadcastVerify(broadcast, secret, recipients.slice(0, 2)))
-  t.ok(HypercoreEncryption.broadcastVerify(broadcast, secret, recipients.slice(2)))
-
-  t.absent(HypercoreEncryption.broadcastVerify(broadcast, secret, [nonReader.publicKey]))
-  t.absent(HypercoreEncryption.broadcastVerify(broadcast, secret, recipients.concat([nonReader.publicKey])))
-})
-
 async function getBlockKey (id, ctx) {
   if (id === -1) id = (Math.random() * 32) | 0
 
@@ -120,12 +91,22 @@ async function getBlockKey (id, ctx) {
   if (id === 0) {
     return {
       id: 0,
-      entropy: b4a.alloc(32, 0)
+      encryptionKey: b4a.alloc(32, 0)
     }
   }
 
   return {
     id,
-    entropy: b4a.alloc(32, id)
+    encryptionKey: b4a.alloc(32, id)
+  }
+}
+
+function generateTransform (namespace) {
+  return function (ctx, entropy) {
+    const block = crypto.hash([namespace, entropy])
+    return {
+      block,
+      hash: crypto.hash(block)
+    }
   }
 }

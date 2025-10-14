@@ -4,8 +4,6 @@ const crypto = require('hypercore-crypto')
 const c = require('compact-encoding')
 const b4a = require('b4a')
 
-const BroadcastEncryption = require('./broadcast')
-
 const [NS_HASH_KEY] = crypto.namespace('hypercore-encryption', 1)
 
 const nonce = b4a.alloc(sodium.crypto_stream_NONCEBYTES)
