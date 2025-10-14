@@ -6,11 +6,7 @@ const b4a = require('b4a')
 
 const BroadcastEncryption = require('./broadcast')
 
-const [
-  NS_BLOCK_KEY,
-  NS_HASH_KEY,
-  NS_ENCRYPTION
-] = crypto.namespace('hypercore-encryption', 3)
+const [NS_HASH_KEY] = crypto.namespace('hypercore-encryption', 1)
 
 const nonce = b4a.alloc(sodium.crypto_stream_NONCEBYTES)
 const hash = nonce.subarray(0, sodium.crypto_generichash_BYTES_MIN)
@@ -30,12 +26,11 @@ class EncryptionProvider {
   async get (id, ctx) {
     const desc = await this.encryption.get(id)
 
-    if (!desc.entropy) {
+    if (!desc.encryptionKey) {
       throw new Error('No encryption details were provided')
     }
 
-    const block = this._transform(ctx, desc.entropy)
-    const hash = crypto.hash([NS_HASH_KEY, block])
+    const { block, hash } = this._transform(ctx, desc.encryptionKey)
 
     return {
       id: desc.id,
@@ -91,9 +86,8 @@ class EncryptionProvider {
 class HypercoreEncryption {
   static PADDING = 8
 
-  constructor ({ fetch, namespace } = {}) {
-    this.fetch = fetch
-
+  constructor (getEncryptionKey) {
+    this.getEncryptionKey = getEncryptionKey
     this._cache = new Map()
   }
 
@@ -109,35 +103,15 @@ class HypercoreEncryption {
     if (this._cache.has(encryptionId)) {
       return {
         id: encryptionId,
-        entropy: this._cache.get(encryptionId)
+        encryptionKey: this._cache.get(encryptionId)
       }
     }
 
-    const { id, entropy } = await this.fetch(encryptionId)
+    const { id, encryptionKey } = await this.getEncryptionKey(encryptionId)
 
-    this._cache.set(id, entropy)
+    this._cache.set(id, encryptionKey)
 
-    return { id, entropy }
-  }
-
-  static namespace (entropy) {
-    return crypto.hash([NS_ENCRYPTION, entropy])
-  }
-
-  static getBlockKey (namespace, entropy, hypercoreKey) {
-    return getBlockKey(namespace, entropy, hypercoreKey)
-  }
-
-  static broadcastEncrypt (plaintext, recipients) {
-    return BroadcastEncryption.pack(plaintext, recipients)
-  }
-
-  static broadcastDecrypt (ciphertext, recipientSecretKey) {
-    return BroadcastEncryption.unpack(ciphertext, recipientSecretKey)
-  }
-
-  static broadcastVerify (ciphertext, data, recipients) {
-    return BroadcastEncryption.verify(ciphertext, data, recipients)
+    return { id, encryptionKey }
   }
 }
 
@@ -154,10 +128,6 @@ function encrypt (block, nonce, key) {
 
 function decrypt (block, nonce, key) {
   return encrypt(block, nonce, key) // symmetric
-}
-
-function getBlockKey (namespace, entropy, hypercoreKey) {
-  return crypto.hash([NS_BLOCK_KEY, namespace, entropy, hypercoreKey])
 }
 
 function blockhash (block, padding, hashKey) {
@@ -184,8 +154,11 @@ function encryptBlock (index, block, id, blockKey, hashKey) {
   encrypt(block, nonce, blockKey)
 }
 
-function defaultTransform (ctx, entropy) {
-  return entropy
+function defaultTransform (ctx, encryptionKey) {
+  return {
+    block: encryptionKey,
+    hash: crypto.hash([NS_HASH_KEY, encryptionKey])
+  }
 }
 
 function defaultCompat () {
