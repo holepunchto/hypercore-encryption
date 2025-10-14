@@ -33,15 +33,13 @@ await core.append('encrypt with key')
 
 ## API
 
-#### `const enc = new HypercoreEncryption({ fetch, namespace })`
+#### `const enc = new HypercoreEncryption(getEncryptionKey)`
 
-Instantiate a new encryption provider. Optionally pass a `preopen` promise that resolves to a key id to be loaded initially.
+Instantiate a new encryption provider.
 
-Any `namespace` passed in will be mixed into all generated encryption keys.
-
-Provide a hooks with the signature:
+Takes a hook with the signature:
 ```js
-function fetch (id) {
+function getEncryptionKey (id) {
   // if id is passed as -1, the module expects the latest key
 
   return {
@@ -73,25 +71,9 @@ Create an encryption provider.
 
 Clear any cached keys.
 
-#### `const namespace = HypercoreEncryption.namespace(seed)`
+#### `const key = enc.get(id)`
 
-Helper to generate namespaces.
-
-#### `const blockKey = HypercoreEncryption.getBlockKey(namespace, entropy, hypercoreKey)`
-
-Helper to generate namespaced block keys.
-
-#### `const ciphetext = HypercoreEncryption.broadcastEncrypt(plaintext, recipients)`
-
-Helper to broadcast encrypt data to `recipients`.
-
-#### `const plaintext = HypercoreEncryption.broadcastEncrypt(ciphertext, recipientSecretKey)`
-
-Helper to decrypt broadcast ciphertexts.
-
-#### `const verified = HypercoreEncryption.broadcastVerify(ciphertext, data, recipients)`
-
-Helper to verify broadcast ciphertexts. Returns `true` if there exists a valid encryption of `data` to each `recipient` key or `false` otherwise
+Fetch the encryption key at `id`.
 
 ## License
 
