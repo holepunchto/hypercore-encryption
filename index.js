@@ -28,7 +28,7 @@ class EncryptionProvider {
       throw new Error('No encryption details were provided')
     }
 
-    const { block, hash } = this._transform(ctx, desc.encryptionKey)
+    const { block, hash } = this._transform(ctx, desc.encryptionKey, false)
 
     return {
       id: desc.id,
@@ -39,7 +39,7 @@ class EncryptionProvider {
 
   async encrypt (index, block, fork, ctx) {
     if (this._compat(ctx, index)) {
-      const keys = await this._transform(ctx, null)
+      const keys = await this._transform(ctx, null, true)
       return DefaultEncryption.encrypt(index, block, fork, keys.block, keys.blinding)
     }
 
@@ -50,7 +50,7 @@ class EncryptionProvider {
 
   async decrypt (index, block, ctx) {
     if (this._compat(ctx, index)) {
-      const keys = await this._transform(ctx, null)
+      const keys = await this._transform(ctx, null, true)
       return DefaultEncryption.decrypt(index, block, keys.block)
     }
 
