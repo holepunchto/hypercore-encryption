@@ -12,7 +12,7 @@ const getEncryptionKey = async (id) => {
 
   return {
     id, // encryption scheme
-    payload // encryption key payload
+    encryptionKey // encryption key
   }
 }
 
@@ -20,8 +20,11 @@ const encryption = new HypercoreEncryption(getEncryptionKey)
 
 const core = new Hypercore(storage, {
   encryption: encryption.createEncryptionProvider({
-    transform (entropy) {
-      return crypto.hash([NAMESPACE, entropy]) // optionally hash
+    transform (ctx, entropy, compat) {
+      return {
+        block: deriveBlockKey(entropy),
+        hash: deriveHashKey(entropy)
+      }
     }
   })
 })
@@ -38,12 +41,12 @@ Instantiate a new encryption provider.
 
 Takes a hook with the signature:
 ```js
-function getEncryptionKey (id) {
+async function getEncryptionKey (id) {
   // if id is passed as -1, the module expects the latest key
 
   return {
     id, // encryption id
-    entropy // entropy
+    encryptionKey // encryption key
   }
 }
 
@@ -55,10 +58,16 @@ Create an encryption provider.
 
 ```
 {
-  transform (ctx, entropy) {
+  transform (ctx, entropy, compat) {
     // implement custom block key derivation
-    // entropy will be passed as null when a compat
-    // is expected
+    // compat will be passed as false when a compat is expected
+
+    // block key and hash/blinding key should be distinct
+    return {
+      block,
+      hash, // not required for compat keys
+      blinding // only required for compat keys
+    }
   },
   compat (ctx, index) {
     // return true or false whether a compat key is expected
@@ -66,13 +75,17 @@ Create an encryption provider.
 }
 ```
 
+See [hypercore encryption](https://github.com/holepunchto/hypercore/blob/main/lib/default-encryption.js) for  details on compat encryption.
+
 #### `enc.clear()`
 
 Clear any cached keys.
 
-#### `const key = enc.get(id)`
+#### `const { id, encryptionKey } = enc.get(id)`
 
 Fetch the encryption key at `id`.
+
+If `-1` is passed as `id`, the latest available key will be returned.
 
 ## License
 

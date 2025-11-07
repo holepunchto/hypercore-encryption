@@ -28,7 +28,7 @@ class EncryptionProvider {
       throw new Error('No encryption details were provided')
     }
 
-    const { block, hash } = this._transform(ctx, desc.encryptionKey, false)
+    const { block, hash } = await this._transform(ctx, desc.encryptionKey, false)
 
     return {
       id: desc.id,
