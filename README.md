@@ -56,11 +56,11 @@ async function getEncryptionKey (id) {
 
 Create an encryption provider.
 
-```
+```js
 {
-  transform (ctx, entropy, compat) {
+  function transform (ctx, entropy, compat) {
     // implement custom block key derivation
-    // compat will be passed as false when a compat is expected
+    // compat will be passed as true when a compat is expected
 
     // block key and hash/blinding key should be distinct
     return {
@@ -69,7 +69,7 @@ Create an encryption provider.
       blinding // only required for compat keys
     }
   },
-  compat (ctx, index) {
+  function compat (ctx, index) {
     // return true or false whether a compat key is expected
   }
 }
@@ -81,7 +81,7 @@ See [hypercore encryption](https://github.com/holepunchto/hypercore/blob/main/li
 
 Clear any cached keys.
 
-#### `const { id, encryptionKey } = enc.get(id)`
+#### `const { id, encryptionKey } = await enc.get(id)`
 
 Fetch the encryption key at `id`.
 
