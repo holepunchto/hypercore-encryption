@@ -7,84 +7,85 @@ Dyanmic Hypercore encryption provider
 ```js
 const HypercoreEncryption = require('hypercore-encryption')
 
-const encryption = new HypercoreEncryption({
-  blindingKey,
-  getBlockKey (id, contexxt) {
-    // get key info corresponding to id and context...
+const getEncryptionKey = async (id) => {
+  // get key info corresponding to id...
 
-    return {
-      version, // encryption scheme
-      padding, // padding byte length
-      key // block key
-    }
+  return {
+    id, // encryption scheme
+    encryptionKey // encryption key
   }
+}
+
+const encryption = new HypercoreEncryption(getEncryptionKey)
+
+const core = new Hypercore(storage, {
+  encryption: encryption.createEncryptionProvider({
+    transform (ctx, entropy, compat) {
+      return {
+        block: deriveBlockKey(entropy),
+        hash: deriveHashKey(entropy)
+      }
+    }
+  })
 })
 
-const core = new Hypercore(storage, { encryption })
 await core.ready()
-
-await core.append('encrypt with key 1')
-
-await encryption.load(99)
-
-await core.append('encrypt with key 99')
+await core.append('encrypt with key')
 ```
 
 ## API
 
-#### `const enc = new HypercoreEncryption({ blindingKey, getBlockKey, getBlindingKey })`
+#### `const enc = new HypercoreEncryption(getEncryptionKey)`
 
-Instantiate a new encryption provider. Optionally pass a `preopen` promise that resolves to a key id to be loaded initially.
+Instantiate a new encryption provider.
 
-Provide a hooks with the signature:
+Takes a hook with the signature:
 ```js
-function getBlockKey (id, context) {
-  // context provides information about the core, eg:
-  //   context.key
-  //   context.manifest
-
-  // id id is passed as -1, the module expects the key to be updated
+async function getEncryptionKey (id) {
+  // if id is passed as -1, the module expects the latest key
 
   return {
-    version, // encryption scheme
-    padding, // padding byte length
-    key // block key
+    id, // encryption id
+    encryptionKey // encryption key
   }
-}
-
-function getBlockKey (context) {
-  return blindingKey // 32 byte blinding key
 }
 
 ```
 
-#### `const padding = enc.padding(context)`
+#### `const provider = enc.createEncryptionProvider({ transform, compat })`
 
-The number of padding bytes.
+Create an encryption provider.
 
-#### `enc.seekable`
+```js
+{
+  function transform (ctx, entropy, compat) {
+    // implement custom block key derivation
+    // compat will be passed as true when a compat is expected
 
-Boolean on whether the current scheme allows for seeks.
+    // block key and hash/blinding key should be distinct
+    return {
+      block,
+      hash, // not required for compat keys
+      blinding // only required for compat keys
+    }
+  },
+  function compat (ctx, index) {
+    // return true or false whether a compat key is expected
+  }
+}
+```
 
-#### `enc.version`
+See [hypercore encryption](https://github.com/holepunchto/hypercore/blob/main/lib/default-encryption.js) for  details on compat encryption.
 
-The version of the currently loaded scheme.
+#### `enc.clear()`
 
-#### `await enc.load(id, context)`
+Clear any cached keys.
 
-Load the key under `id` and set to be the current encryption info.
+#### `const { id, encryptionKey } = await enc.get(id)`
 
-#### `await enc.encrypt(index, block, fork)`
+Fetch the encryption key at `id`.
 
-Encrypt a block in place.
-
-#### `await enc.decrypt(index, block)`
-
-Decrypt a block in place.
-
-#### `const blockKey = HypercoreEncryption.getBlockKey(hypercoreKey, encryptionKey)`
-
-Helper to generate namespaced block keys.
+If `-1` is passed as `id`, the latest available key will be returned.
 
 ## License
 

@@ -25,9 +25,10 @@
     "standard": "^17.1.2"
   },
   "dependencies": {
-    "b4a": "^1.6.7",
-    "compact-encoding": "^2.16.0",
-    "hypercore-crypto": "^3.5.0",
+    "b4a": "^1.7.3",
+    "compact-encoding": "^2.16.1",
+    "hypercore": "^11.16.2",
+    "hypercore-crypto": "^3.6.1",
     "ready-resource": "^1.1.2",
     "sodium-universal": "^5.0.1"
   }
