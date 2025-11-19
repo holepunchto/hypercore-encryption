@@ -1,6 +1,6 @@
 # hypercore-encryption
 
-Dyanmic Hypercore encryption provider
+Dynamic Hypercore encryption provider
 
 ## Usage
 
