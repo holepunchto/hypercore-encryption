@@ -139,7 +139,9 @@ function encryptBlock (index, block, id, blockKey, hashKey, version) {
   const padding = block.subarray(0, HypercoreEncryption.PADDING)
   block = block.subarray(HypercoreEncryption.PADDING)
 
-  c.uint8.encode({ start: 0, end: 1, buffer: padding}, version)
+  blockHash(block, padding, hashKey)
+
+  c.uint8.encode({ start: 0, end: 1, buffer: padding }, version)
   c.uint32.encode({ start: 4, end: 8, buffer: padding }, id)
 
   c.uint64.encode({ start: 0, end: 8, buffer: nonce }, index)
