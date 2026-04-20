@@ -45,7 +45,7 @@ class EncryptionProvider {
 
     const keys = await this.get(-1, ctx)
 
-    encryptBlock(index, block, keys.id, keys.block, keys.hash)
+    HypercoreEncryption.encryptBlock(index, block, keys.id, keys.block, keys.hash)
   }
 
   async decrypt (index, block, ctx) {
@@ -111,6 +111,24 @@ class HypercoreEncryption {
 
     return { id, encryptionKey }
   }
+
+  static encryptBlock (index, block, id, blockKey, hashKey) {
+    const padding = block.subarray(0, HypercoreEncryption.PADDING)
+    block = block.subarray(HypercoreEncryption.PADDING)
+
+    blockhash(block, padding, hashKey)
+    c.uint32.encode({ start: 4, end: 8, buffer: padding }, id)
+
+    c.uint64.encode({ start: 0, end: 8, buffer: nonce }, index)
+
+    padding[0] = 1 // version in plaintext
+
+    nonce.set(padding, 8, 16)
+
+    // The combination of index, key id, fork id and block hash is very likely
+    // to be unique for a given Hypercore and therefore our nonce is suitable
+    encrypt(block, nonce, blockKey)
+  }
 }
 
 module.exports = HypercoreEncryption
@@ -132,24 +150,6 @@ function blockhash (block, padding, hashKey) {
   sodium.crypto_generichash(hash, block, hashKey)
   padding.set(hash.subarray(0, 8)) // copy first 8 bytes of hash
   hash.fill(0) // clear nonce buffer
-}
-
-function encryptBlock (index, block, id, blockKey, hashKey) {
-  const padding = block.subarray(0, HypercoreEncryption.PADDING)
-  block = block.subarray(HypercoreEncryption.PADDING)
-
-  blockhash(block, padding, hashKey)
-  c.uint32.encode({ start: 4, end: 8, buffer: padding }, id)
-
-  c.uint64.encode({ start: 0, end: 8, buffer: nonce }, index)
-
-  padding[0] = 1 // version in plaintext
-
-  nonce.set(padding, 8, 16)
-
-  // The combination of index, key id, fork id and block hash is very likely
-  // to be unique for a given Hypercore and therefore our nonce is suitable
-  encrypt(block, nonce, blockKey)
 }
 
 function defaultTransform (ctx, encryptionKey) {
