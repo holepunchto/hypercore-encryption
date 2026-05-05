@@ -14,12 +14,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/holepunchto/hypercore-block-encryption.git"
+    "url": "git+ssh://git@github.com/holepunchto/hypercore-encryption.git"
   },
   "bugs": {
-    "url": "https://github.com/holepunchto/hypercore-block-encryption/issues"
+    "url": "https://github.com/holepunchto/hypercore-encryption/issues"
   },
-  "homepage": "https://github.com/holepunchto/hypercore-block-encryption#readme",
+  "homepage": "https://github.com/holepunchto/hypercore-encryption#readme",
   "devDependencies": {
     "brittle": "^3.12.1",
     "standard": "^17.1.2"
