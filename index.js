@@ -6,6 +6,7 @@ const b4a = require('b4a')
 
 const [NS_HASH_KEY] = crypto.namespace('hypercore-encryption', 1)
 
+const ENCRYPTION_SCHEME_VERSION = 1
 const nonce = b4a.alloc(sodium.crypto_stream_NONCEBYTES)
 const hash = nonce.subarray(0, sodium.crypto_generichash_BYTES_MIN)
 
@@ -45,7 +46,7 @@ class EncryptionProvider {
 
     const keys = await this.get(-1, ctx)
 
-    encryptBlock(index, block, keys.id, keys.block, keys.hash)
+    encryptBlock(index, block, keys.id, keys.block, keys.hash, ENCYRPTION_SCHEME_VERSION)
   }
 
   async decrypt (index, block, ctx) {
@@ -134,16 +135,16 @@ function blockhash (block, padding, hashKey) {
   hash.fill(0) // clear nonce buffer
 }
 
-function encryptBlock (index, block, id, blockKey, hashKey) {
+function encryptBlock (index, block, id, blockKey, hashKey, version) {
   const padding = block.subarray(0, HypercoreEncryption.PADDING)
   block = block.subarray(HypercoreEncryption.PADDING)
 
-  blockhash(block, padding, hashKey)
+  blockHash(block, padding, hashKey)
+
+  c.uint8.encode({ start: 0, end: 1, buffer: padding }, version)
   c.uint32.encode({ start: 4, end: 8, buffer: padding }, id)
 
   c.uint64.encode({ start: 0, end: 8, buffer: nonce }, index)
-
-  padding[0] = 1 // version in plaintext
 
   nonce.set(padding, 8, 16)
 
