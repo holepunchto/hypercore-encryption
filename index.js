@@ -74,7 +74,7 @@ class EncryptionProvider {
     const keys = await this.get(id, ctx)
 
     c.uint64.encode({ start: 0, end: 8, buffer: nonce }, index)
-    nonce.set(padding, 8, 16)
+    nonce.set(padding, 8)
 
     // Decrypt the block using the full nonce
     decrypt(block, nonce, keys.block)
@@ -145,7 +145,7 @@ function encryptBlock (index, block, id, blockKey, hashKey) {
 
   padding[0] = 1 // version in plaintext
 
-  nonce.set(padding, 8, 16)
+  nonce.set(padding, 8)
 
   // The combination of index, key id, fork id and block hash is very likely
   // to be unique for a given Hypercore and therefore our nonce is suitable
